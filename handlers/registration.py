@@ -118,15 +118,30 @@ async def load_photo(message: types.Message,
     )
     print(message.photo)
     async with state.proxy() as data:
-        db.insert_profile(
-            tg_id=message.from_user.id,
-            nickname=data['nickname'],
-            bio=data['bio'],
-            age=data['age'],
-            married=data['married'],
-            gender=data['gender'],
-            photo=path.name
+        profile = db.select_profile(
+            tg_id=message.from_user.id
         )
+
+        if not profile:
+            db.insert_profile(
+                tg_id=message.from_user.id,
+                nickname=data['nickname'],
+                bio=data['bio'],
+                age=data['age'],
+                married=data['married'],
+                gender=data['gender'],
+                photo=path.name
+            )
+        else:
+            db.update_profile(
+                nickname=data['nickname'],
+                bio=data['bio'],
+                age=data['age'],
+                married=data['married'],
+                gender=data['gender'],
+                photo=path.name,
+                tg_id=message.from_user.id,
+            )
 
         with open(path.name, 'rb') as photo:
             await bot.send_photo(
