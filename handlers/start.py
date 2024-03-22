@@ -1,6 +1,8 @@
 import sqlite3
 
 from aiogram import types, Dispatcher
+from aiogram.utils.deep_linking import _create_link
+
 from config import bot, MEDIA_DESTINATION
 from const import START_MENU_TEXT
 from database import bot_db
@@ -16,16 +18,32 @@ async def start_menu(message: types.Message):
         first_name=message.from_user.first_name,
         last_name=message.from_user.last_name,
     )
+    print(message.get_full_command())
+    command = message.get_full_command()
+    if command[1] != "":
+        link = await _create_link("start", payload=command[1])
+        owner = db.select_user_by_link(link=link)
 
-    # with open(MEDIA_DESTINATION + "bot-pic.jpg", 'rb') as photo:
-    #     await bot.send_photo(
-    #         chat_id=message.from_user.id,
-    #         photo=photo,
-    #         caption=START_MENU_TEXT.format(
-    #             user=message.from_user.first_name
-    #         ),
-    #         reply_markup=await start_menu_keyboard()
-    #     )
+        if owner['telegram_id'] == message.from_user.id:
+            await bot.send_message(
+                chat_id=message.from_user.id,
+                text="U can not use ur own link!!"
+            )
+            return
+        try:
+            db.insert_reference_user(
+                owner=owner['telegram_id'],
+                reference=message.from_user.id
+            )
+            db.update_owner_balance(
+                tg_id=owner['telegram_id']
+            )
+        except sqlite3.IntegrityError:
+            await bot.send_message(
+                chat_id=message.from_user.id,
+                text="U have used this link"
+            )
+            return
 
     with open(MEDIA_DESTINATION + "bot-ani.gif", 'rb') as animation:
         await bot.send_animation(
